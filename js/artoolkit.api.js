@@ -1,4 +1,4 @@
-(function() {
+;(function() {
 	'use strict'
 
 	/**
@@ -127,73 +127,6 @@
 	ARController.prototype.process = function(image) {
 		this.detectMarker(image);
 
-		var markerNum = this.getMarkerNum();
-		var k,o;
-		for (k in this.patternMarkers) {
-			o = this.patternMarkers[k]
-			o.inPrevious = o.inCurrent;
-			o.inCurrent = false;
-		}
-		for (k in this.barcodeMarkers) {
-			o = this.barcodeMarkers[k]
-			o.inPrevious = o.inCurrent;
-			o.inCurrent = false;
-		}
-		for (k in this.nftMarkers) {
-			o = this.nftMarkers[k]
-			o.inPrevious = o.inCurrent;
-			o.inCurrent = false;
-		}
-
-		this.dispatchEvent({
-			name: 'markerNum',
-			target: this,
-			data: markerNum
-		});
-
-		for (var i=0; i<markerNum; i++) {
-			var markerInfo = this.getMarker(i);
-
-			var markerType = artoolkit.UNKNOWN_MARKER;
-			var visible = this.trackPatternMarkerId(-1);
-
-			if (markerInfo.idPatt > -1 && (markerInfo.id === markerInfo.idPatt || markerInfo.idMatrix === -1)) {
-				visible = this.trackPatternMarkerId(markerInfo.idPatt);
-				markerType = artoolkit.PATTERN_MARKER;
-
-				if (markerInfo.dir !== markerInfo.dirPatt) {
-					this.setMarkerInfoDir(i, markerInfo.dirPatt);
-				}
-
-			} else if (markerInfo.idMatrix > -1) {
-				visible = this.trackBarcodeMarkerId(markerInfo.idMatrix);
-				markerType = artoolkit.BARCODE_MARKER;
-
-				if (markerInfo.dir !== markerInfo.dirMatrix) {
-					this.setMarkerInfoDir(i, markerInfo.dirMatrix);
-				}
-			}
-
-			if (markerType !== artoolkit.UNKNOWN_MARKER && visible.inPrevious) {
-				this.getTransMatSquareCont(i, visible.markerWidth, visible.matrix, visible.matrix);
-			} else {
-				this.getTransMatSquare(i, visible.markerWidth, visible.matrix);
-			}
-
-			visible.inCurrent = true;
-			this.transMatToGLMat(visible.matrix, this.transform_mat);
-			this.dispatchEvent({
-				name: 'getMarker',
-				target: this,
-				data: {
-					index: i,
-					type: markerType,
-					marker: markerInfo,
-					matrix: this.transform_mat
-				}
-			});
-		}
-
 		var nftMarkerCount = this.nftMarkerCount;
 		artoolkit.detectNFTMarker(this.id);
 		for (var i=0; i<nftMarkerCount; i++) {
@@ -216,105 +149,9 @@
 			}
 		}
 
-		var multiMarkerCount = this.getMultiMarkerCount();
-		for (var i=0; i<multiMarkerCount; i++) {
-			var subMarkerCount = this.getMultiMarkerPatternCount(i);
-			var visible = false;
-
-			artoolkit.getTransMatMultiSquareRobust(this.id, i);
-			this.transMatToGLMat(this.marker_transform_mat, this.transform_mat);
-
-			for (var j=0; j<subMarkerCount; j++) {
-				var multiEachMarkerInfo = this.getMultiEachMarker(i, j);
-				if (multiEachMarkerInfo.visible >= 0) {
-					visible = true;
-					this.dispatchEvent({
-						name: 'getMultiMarker',
-						target: this,
-						data: {
-							multiMarkerId: i,
-							matrix: this.transform_mat
-						}
-					});
-					break;
-				}
-			}
-			if (visible) {
-				for (var j=0; j<subMarkerCount; j++) {
-					var multiEachMarkerInfo = this.getMultiEachMarker(i, j);
-					this.transMatToGLMat(this.marker_transform_mat, this.transform_mat);
-					this.dispatchEvent({
-						name: 'getMultiMarkerSub',
-						target: this,
-						data: {
-							multiMarkerId: i,
-							markerIndex: j,
-							marker: multiEachMarkerInfo,
-							matrix: this.transform_mat
-						}
-					});
-				}
-			}
-		}
 		if (this._bwpointer) {
 			this.debugDraw();
 		}
-	};
-
-	/**
-		Adds the given pattern marker ID to the index of tracked IDs.
-		Sets the markerWidth for the pattern marker to markerWidth.
-
-		Used by process() to implement continuous tracking, 
-		keeping track of the marker's transformation matrix
-		and customizable marker widths.
-
-		@param {number} id ID of the pattern marker to track.
-		@param {number} markerWidth The width of the marker to track.
-		@return {Object} The marker tracking object.
-	*/
-	ARController.prototype.trackPatternMarkerId = function(id, markerWidth) {
-		var obj = this.patternMarkers[id];
-		if (!obj) {
-			this.patternMarkers[id] = obj = {
-				inPrevious: false,
-				inCurrent: false,
-				matrix: new Float32Array(12),
-				markerWidth: markerWidth || this.defaultMarkerWidth
-			};
-		}
-		if (markerWidth) {
-			obj.markerWidth = markerWidth;
-		}
-		return obj;
-	};
-
-	/**
-		Adds the given barcode marker ID to the index of tracked IDs.
-		Sets the markerWidth for the pattern marker to markerWidth.
-
-		Used by process() to implement continuous tracking, 
-		keeping track of the marker's transformation matrix
-		and customizable marker widths.
-
-		@param {number} id ID of the barcode marker to track.
-		@param {number} markerWidth The width of the marker to track.
-		@return {Object} The marker tracking object.
-	*/
-	ARController.prototype.trackBarcodeMarkerId = function(id, markerWidth) {
-		var obj = this.barcodeMarkers[id];
-		if (!obj) {
-			this.barcodeMarkers[id] = obj = {
-				inPrevious: false,
-				inCurrent: false,
-				matrix: new Float32Array(12),
-				markerWidth: markerWidth || this.defaultMarkerWidth
-			};
-		}
-		if (markerWidth) {
-			obj.markerWidth = markerWidth;
-		}
-		return obj;
 	};
 
 	/**
@@ -446,9 +283,9 @@
 		@param {function} onSuccess - The success callback. Called with the id of the loaded marker on a successful load.
 		@param {function} onError - The error callback. Called with the encountered error if the load fails.
 	*/
-	ARController.prototype.loadNFTMarker = function(markerURL, onSuccess, onError) {
+  ARController.prototype.loadNFTMarker = function (markerURL, buildTimeString, onSuccess, onError) {
 		var self = this;
-		return artoolkit.addNFTMarker(this.id, markerURL, function(id) {
+    return artoolkit.addNFTMarker(this.id, markerURL, buildTimeString, function(id) {
 			self.nftMarkerCount = id + 1;
 			onSuccess(id);
 		}, onError);
@@ -583,7 +420,7 @@
 	*/
 	ARController.prototype.detectMarker = function(image) {
 		if (this._copyImageToHeap(image)) {
-			return artoolkit.detectMarker(this.id);
+//			return artoolkit.detectMarker(this.id);
 		}
 		return -99;
 	};
@@ -1183,12 +1020,15 @@
 		var onSuccess = configuration.onSuccess;
 		var onError = configuration.onError || function(err) { console.error("ARController.getUserMedia", err); };
 
-		var video = document.createElement('video');
+    var video = document.createElement('video');
+    video.setAttribute('playsinline', '');
 
 		var initProgress = function() {
 			if (this.videoWidth !== 0) {
-				onSuccess(video);
-			}
+        onSuccess(video);
+      }
+      readyToPlay = true;
+      setTimeout(play, 500);
 		};
 
 		var readyToPlay = false;
@@ -1212,10 +1052,8 @@
 		});
 
 		var success = function(stream) {
-			video.addEventListener('loadedmetadata', initProgress, false);
-			video.src = window.URL.createObjectURL(stream);
-			readyToPlay = true;
-			play(); // Try playing without user input, should work on non-Android Chrome
+      video.addEventListener('loadedmetadata', initProgress, false);
+      video.srcObject = stream;
 		};
 
 		var constraints = {};
@@ -1258,7 +1096,7 @@
 		  	}
 		};
 
-		if ( false ) {
+		if ( true ) {
 		// if ( navigator.mediaDevices || window.MediaStreamTrack) {
 			if (navigator.mediaDevices) {
 				navigator.mediaDevices.getUserMedia({
@@ -1558,15 +1396,15 @@
 		});
 	}
 
-	function addNFTMarker(arId, url, callback) {
+  function addNFTMarker(arId, url, timeStr, callback) {
 		var mId = marker_count++;
 		var prefix = '/markerNFT_' + mId;
 		var filename1 = prefix + '.fset';
 		var filename2 = prefix + '.iset';
 		var filename3 = prefix + '.fset3';
-		ajax(url + '.fset', filename1, function() {
-			ajax(url + '.iset', filename2, function() {
-				ajax(url + '.fset3', filename3, function() {
+    ajax(url + '.fset' + timeStr, filename1, function() {
+      ajax(url + '.iset' + timeStr, filename2, function() {
+        ajax(url + '.fset3' + timeStr, filename3, function() {
 					var id = Module._addNFTMarker(arId, prefix);
 					if (callback) callback(id);
 				});

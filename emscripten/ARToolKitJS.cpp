@@ -329,9 +329,6 @@ extern "C" {
 			arMultiFreeConfig(arc->multi_markers[i].multiMarkerHandle);
 		}
 
-		delete &arc->multi_markers;
-		delete arc;
-
 		return 0;
 	}
 
